@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KasFlow Pro - Sistem Uang Kas Tim & Kantor</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KasFlow Pro">
+    <meta name="description" content="Aplikasi PWA Kas Tim & Kantor dengan Fitur Iuran, Kas Bon, dan Google Spreadsheet Sync">
+
+    <!-- Web App Manifest Dynamic Data Link -->
+    <link rel="manifest" id="manifest-link">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0a0d14',
+                            card: 'rgba(18, 24, 38, 0.75)',
+                            border: 'rgba(255, 255, 255, 0.08)',
+                            accent: '#6366f1'
+                        },
+                        neon: {
+                            blue: '#38bdf8',
+                            emerald: '#34d399',
+                            rose: '#fb7185',
+                            amber: '#fbbf24',
+                            purple: '#c084fc'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-blue': '0 0 20px rgba(56, 189, 248, 0.25)',
+                        'neon-emerald': '0 0 20px rgba(52, 211, 153, 0.25)',
+                        'neon-purple': '0 0 20px rgba(192, 132, 252, 0.25)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font & Lucide Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #06090e;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-input {
+            background: rgba(8, 12, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #fff;
+            transition: all 0.2s ease;
+        }
+
+        .glass-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+            outline: none;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        .pulse-glow {
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+
+        /* Print Style */
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print { display: none !important; }
+            .glass-card { background: white !important; border: 1px solid #ccc !important; color: black !important; box-shadow: none !important; }
+            .text-gray-400, .text-gray-300 { color: #333 !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20 md:pb-10 custom-scrollbar">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 glass-card border-b border-white/10 px-4 py-3 mb-6">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400">
+                    <i data-lucide="wallet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-sky-300 to-emerald-400">
+                        KasFlow<span class="text-xs ml-1 px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 font-semibold">PRO</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 flex items-center gap-1.5">
+                        <span id="syncStatusBadge" class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span id="syncStatusText">Lokal Syne Ready</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Header Action Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="openModal('modalSettings')" title="Pengaturan Spreadsheet & Data" class="p-2 rounded-xl glass-card hover:bg-white/10 text-gray-300 transition hover:text-white">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+                <button onclick="triggerSheetSync()" id="btnSyncHeader" title="Sinkronkan ke Google Spreadsheet" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition font-medium text-xs">
+                    <i data-lucide="refresh-cw" id="iconSyncHeader" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Sync Sheet</span>
+                </button>
+                <button onclick="openModal('modalAddTransaction')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20 hover:opacity-90 transition font-medium text-xs sm:text-sm">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>Catat Cash</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- PWA Install Banner -->
+    <div id="pwaInstallBanner" class="hidden max-w-7xl mx-auto px-4 mb-6">
+        <div class="p-4 rounded-2xl bg-gradient-to-r from-indigo-900/60 to-purple-900/60 border border-indigo-500/30 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-indigo-500/20 text-indigo-300">
+                    <i data-lucide="download-cloud" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-sm text-white">Install KasFlow Pro</h4>
+                    <p class="text-xs text-gray-300">Akses lebih cepat & dapat dibuka secara offline di HP/Laptop Anda.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="dismissPWAInstall()" class="px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white">Nanti</button>
+                <button onclick="installPWAApp()" class="px-4 py-1.5 rounded-xl bg-indigo-500 text-white font-medium text-xs hover:bg-indigo-600 transition">Install</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 space-y-6">
+
+        <!-- STATS DASHBOARD GRID -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <!-- Total Saldo -->
+            <div class="glass-card p-4 rounded-2xl relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Saldo Kas Bersih</span>
+                    <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                        <i data-lucide="landmark" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-xl sm:text-2xl font-extrabold text-white tracking-tight" id="statTotalBalance">Rp 0</div>
+                <div class="mt-2 text-[11px] text-gray-400 flex items-center gap-1">
+                    <span class="text-emerald-400 font-semibold" id="statBalanceNetStatus">Aktif</span>
+                    <span>• Kas siap pakai</span>
+                </div>
+            </div>
+
+            <!-- Total Pemasukan -->
+            <div class="glass-card p-4 rounded-2xl relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Masuk</span>
+                    <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                        <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-xl sm:text-2xl font-extrabold text-emerald-400 tracking-tight" id="statTotalIncome">Rp 0</div>
+                <div class="mt-2 text-[11px] text-gray-400">
+                    Iuran + Kas Masuk Umum
+                </div>
+            </div>
+
+            <!-- Total Pengeluaran -->
+            <div class="glass-card p-4 rounded-2xl relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-rose-500/10 rounded-full blur-xl group-hover:bg-rose-500/20 transition"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Keluar</span>
+                    <div class="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                        <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-xl sm:text-2xl font-extrabold text-rose-400 tracking-tight" id="statTotalExpense">Rp 0</div>
+                <div class="mt-2 text-[11px] text-gray-400">
+                    Biaya Operasional & Tim
+                </div>
+            </div>
+
+            <!-- Kas Bon Aktif -->
+            <div class="glass-card p-4 rounded-2xl relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Kas Bon / Piutang</span>
+                    <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+                        <i data-lucide="hand-coins" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="text-xl sm:text-2xl font-extrabold text-amber-400 tracking-tight" id="statTotalBon">Rp 0</div>
+                <div class="mt-2 text-[11px] text-gray-400 flex items-center justify-between">
+                    <span>Pinjaman Anggota</span>
+                    <span id="statBonCountBadge" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold text-[10px]">0 Aktif</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIDDLE SECTION: CHARTS & IURAN TRACKER 12 ANGGOTA -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Iuran Tracker (12 Anggota Tim) - 2 Cols -->
+            <div class="lg:col-span-2 glass-card p-5 rounded-3xl space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <h3 class="font-bold text-base text-white flex items-center gap-2">
+                            <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
+                            Tracker Iuran Rutin Tim (<span id="iuranMonthLabel">Bulan Ini</span>)
+                        </h3>
+                        <p class="text-xs text-gray-400">Progres pembayaran tagihan kas rutin dari 12 anggota terdaftar.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="iuranProgressCount" class="text-xs px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">0/12 Lunas</span>
+                        <button onclick="openModal('modalMembersList')" class="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition" title="Kelola Anggota">
+                            <i data-lucide="user-cog" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-gray-800/80 h-2.5 rounded-full overflow-hidden">
+                    <div id="iuranProgressBar" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full transition-all duration-500 w-0"></div>
+                </div>
+
+                <!-- Grid 12 Anggota -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 pt-2" id="gridMembersIuran">
+                    <!-- Dynamic Member Cards Inserted Here -->
+                </div>
+            </div>
+
+            <!-- Visual Analytics Chart (1 Col) -->
+            <div class="glass-card p-5 rounded-3xl flex flex-col justify-between space-y-4">
+                <div>
+                    <h3 class="font-bold text-base text-white flex items-center gap-2 mb-1">
+                        <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-400"></i>
+                        Analisis Alokasi Kas
+                    </h3>
+                    <p class="text-xs text-gray-400">Proporsi perbandingan kas & piutang.</p>
+                </div>
+
+                <!-- Canvas Visual Chart -->
+                <div class="relative flex items-center justify-center my-2">
+                    <canvas id="chartCashFlow" class="w-44 h-44 max-w-full max-h-44"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                        <span class="text-[10px] uppercase text-gray-400 font-semibold">Net Liquid</span>
+                        <span id="chartCenterBalance" class="text-sm font-bold text-white">Rp 0</span>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-white/10">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                        <span class="text-gray-300">Pemasukan</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span>
+                        <span class="text-gray-300">Pengeluaran</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                        <span class="text-gray-300">Kas Bon</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-400 inline-block"></span>
+                        <span class="text-gray-300">Iuran</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TRANSACTIONS HISTORY TABLE & FILTER SECTION -->
+        <div class="glass-card rounded-3xl p-5 space-y-4">
+            <!-- Header Filter Controls -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/10">
+                <div>
+                    <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+                        Riwayat Transaksi
+                    </h3>
+                    <p class="text-xs text-gray-400">Daftar arus keluar masuk & iuran kas tim.</p>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="exportToCSV()" class="px-3 py-1.5 rounded-xl glass-card hover:bg-white/10 text-gray-300 transition text-xs flex items-center gap-1.5">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Excel / CSV</span>
+                    </button>
+                    <button onclick="window.print()" class="px-3 py-1.5 rounded-xl glass-card hover:bg-white/10 text-gray-300 transition text-xs flex items-center gap-1.5">
+                        <i data-lucide="printer" class="w-4 h-4 text-sky-400"></i>
+                        <span>Cetak PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Inputs Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Search -->
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="filterSearch" oninput="renderTransactions()" placeholder="Cari keterangan / anggota..." class="glass-input pl-9 pr-3 py-2 rounded-xl w-full text-xs">
+                </div>
+
+                <!-- Filter Category / Type -->
+                <div>
+                    <select id="filterType" onchange="renderTransactions()" class="glass-input px-3 py-2 rounded-xl w-full text-xs">
+                        <option value="ALL">Semua Jenis Transaksi</option>
+                        <option value="IURAN">Iuran Rutin Anggota</option>
+                        <option value="MASUK">Kas Masuk Umum</option>
+                        <option value="KELUAR">Kas Keluar / Operasional</option>
+                        <option value="KAS_BON">Kas Bon / Piutang</option>
+                    </select>
+                </div>
+
+                <!-- Filter Member -->
+                <div>
+                    <select id="filterMember" onchange="renderTransactions()" class="glass-input px-3 py-2 rounded-xl w-full text-xs">
+                        <option value="ALL">Semua Anggota Tim</option>
+                        <!-- Options generated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Date Range / Month -->
+                <div>
+                    <input type="month" id="filterMonth" onchange="renderTransactions()" class="glass-input px-3 py-2 rounded-xl w-full text-xs">
+                </div>
+            </div>
+
+            <!-- Transactions Table / Mobile Cards -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left text-xs border-collapse min-w-[700px]">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-white/10 uppercase tracking-wider text-[11px]">
+                            <th class="p-3">Tanggal</th>
+                            <th class="p-3">Jenis</th>
+                            <th class="p-3">Anggota / Penanggung Jawab</th>
+                            <th class="p-3">Keterangan</th>
+                            <th class="p-3 text-right">Nominal</th>
+                            <th class="p-3 text-center">Status / Nota</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody" class="divide-y divide-white/5">
+                        <!-- Transaksi di-render di sini oleh JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State Indicator -->
+            <div id="emptyTransactionsState" class="hidden py-12 text-center text-gray-400 space-y-2">
+                <i data-lucide="inbox" class="w-10 h-10 mx-auto text-gray-500 opacity-60"></i>
+                <p class="text-sm font-medium">Belum ada data transaksi yang sesuai filter.</p>
+                <p class="text-xs text-gray-500">Klik tombol "Catat Cash" di atas untuk menambahkan transaksi baru.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL: ADD / EDIT TRANSACTION -->
+    <div id="modalAddTransaction" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-card max-w-lg w-full rounded-3xl p-6 space-y-5 border border-white/15 shadow-2xl relative my-8">
+            <button onclick="closeModal('modalAddTransaction')" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                <div class="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+                    <i data-lucide="plus-circle" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-white" id="modalAddTitle">Catat Transaksi Uang Kas</h3>
+                    <p class="text-xs text-gray-400">Input transaksi masuk, pengeluaran, iuran, atau kas bon.</p>
+                </div>
+            </div>
+
+            <form id="formTransaction" onsubmit="handleSaveTransaction(event)" class="space-y-4">
+                <input type="hidden" id="txId">
+
+                <!-- Jenis Transaksi -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Jenis Transaksi</label>
+                    <select id="txType" onchange="toggleFormFieldsBasedOnType()" class="glass-input w-full p-2.5 rounded-xl text-xs font-medium" required>
+                        <option value="IURAN">Iuran Rutin Bulanan Anggota (+ Pemasukan)</option>
+                        <option value="MASUK">Kas Masuk Umum (Sponsor, Project Bonus, Hibah) (+ Pemasukan)</option>
+                        <option value="KELUAR">Kas Keluar / Operasional Kantor (- Pengeluaran)</option>
+                        <option value="KAS_BON">Kas Bon / Piutang Anggota (- Kas Bon)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Nominal -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1.5">Nominal (Rp)</label>
+                        <input type="number" id="txAmount" min="1" placeholder="Contoh: 50000" class="glass-input w-full p-2.5 rounded-xl text-xs font-semibold text-emerald-400" required>
+                    </div>
+                    <!-- Tanggal -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1.5">Tanggal</label>
+                        <input type="date" id="txDate" class="glass-input w-full p-2.5 rounded-xl text-xs" required>
+                    </div>
+                </div>
+
+                <!-- Anggota Tim Dropdown -->
+                <div id="containerMemberSelect">
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Anggota Tim Terkait</label>
+                    <select id="txMember" class="glass-input w-full p-2.5 rounded-xl text-xs">
+                        <!-- Generated via JS -->
+                    </select>
+                </div>
+
+                <!-- Keterangan -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Keterangan / Keperluan</label>
+                    <textarea id="txDescription" rows="2" placeholder="Catat detail keperluan transaksi..." class="glass-input w-full p-2.5 rounded-xl text-xs" required></textarea>
+                </div>
+
+                <!-- Lampiran Foto Nota / Struk -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">Lampiran Nota / Struk (Opsional)</label>
+                    <input type="file" id="txImageInput" accept="image/*" onchange="handleImagePreview(event)" class="glass-input w-full p-2 rounded-xl text-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-indigo-500/20 file:text-indigo-300 hover:file:bg-indigo-500/30">
+                    <input type="hidden" id="txImageData">
+                    
+                    <!-- Preview Image Container -->
+                    <div id="imagePreviewContainer" class="hidden mt-2 relative w-24 h-24 rounded-xl overflow-hidden border border-white/20">
+                        <img id="imagePreview" src="" class="w-full h-full object-cover">
+                        <button type="button" onclick="removeImagePreview()" class="absolute top-1 right-1 bg-red-600/80 text-white p-1 rounded-full text-xs">
+                            <i data-lucide="x" class="w-3 h-3"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                    <button type="button" onclick="closeModal('modalAddTransaction')" class="px-4 py-2 rounded-xl text-xs text-gray-400 hover:text-white">Batal</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium text-xs hover:opacity-90 transition flex items-center gap-1.5">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        <span>Simpan Transaksi</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: KAS BON / PELUNASAN SETTLEMENT -->
+    <div id="modalBonSettlement" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full rounded-3xl p-6 space-y-4 border border-white/15 relative">
+            <button onclick="closeModal('modalBonSettlement')" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+                    <i data-lucide="hand-coins" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-white">Pelunasan Kas Bon</h3>
+                    <p class="text-xs text-gray-400" id="bonMemberName">Anggota</p>
+                </div>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+                <div class="flex justify-between text-xs text-gray-300">
+                    <span>Sisa Bon Aktif:</span>
+                    <span id="bonRemainingAmount" class="font-bold text-amber-400">Rp 0</span>
+                </div>
+                <p id="bonDetailDesc" class="text-[11px] text-gray-400 italic">Keterangan bon...</p>
+            </div>
+
+            <form id="formSettlement" onsubmit="handleSaveSettlement(event)" class="space-y-3">
+                <input type="hidden" id="bonTxId">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Jumlah Pembayaran / Cicilan (Rp)</label>
+                    <input type="number" id="settlementAmount" class="glass-input w-full p-2.5 rounded-xl text-xs font-bold text-emerald-400" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Catatan Pelunasan</label>
+                    <input type="text" id="settlementNote" placeholder="Misal: Lunas via transfer / Potong gaji" class="glass-input w-full p-2.5 rounded-xl text-xs" required>
+                </div>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalBonSettlement')" class="px-3 py-2 text-xs text-gray-400">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition">Proses Bayar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: KELOLA ANGGOTA TIM (12 PEOPLE DEFAULT) -->
+    <div id="modalMembersList" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full rounded-3xl p-6 space-y-4 border border-white/15 relative">
+            <button onclick="closeModal('modalMembersList')" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-purple-500/20 text-purple-400">
+                    <i data-lucide="users" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-white">Kelola Anggota Tim</h3>
+                    <p class="text-xs text-gray-400">Tambah atau ubah nama 12 anggota kas.</p>
+                </div>
+            </div>
+
+            <!-- Form Quick Add Member -->
+            <form onsubmit="handleAddMember(event)" class="flex gap-2">
+                <input type="text" id="newMemberName" placeholder="Nama anggota baru..." class="glass-input flex-1 p-2 rounded-xl text-xs" required>
+                <button type="submit" class="px-3 py-2 bg-purple-600 text-white rounded-xl text-xs font-medium hover:bg-purple-500">Tambah</button>
+            </form>
+
+            <!-- Members List Scrollable -->
+            <div id="membersManagerList" class="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                <!-- Dynamic List -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SETTINGS & GOOGLE SPREADSHEET INTEGRATION -->
+    <div id="modalSettings" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-card max-w-lg w-full rounded-3xl p-6 space-y-5 border border-white/15 relative my-8">
+            <button onclick="closeModal('modalSettings')" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                <div class="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                    <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-white">Google Spreadsheet Sync</h3>
+                    <p class="text-xs text-gray-400">Konfigurasi integrasi Google Apps Script (GAS).</p>
+                </div>
+            </div>
+
+            <!-- Spreadsheet Setup Section -->
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Google Apps Script Web App URL</label>
+                    <input type="url" id="settingScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" class="glass-input w-full p-2.5 rounded-xl text-xs font-mono">
+                    <p class="text-[11px] text-gray-400 mt-1">Masukkan URL Web App hasil deploy Apps Script Anda.</p>
+                </div>
+
+                <div class="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+                            <i data-lucide="code" class="w-4 h-4"></i>
+                            Script Apps Script (GAS)
+                        </span>
+                        <button onclick="copyGASScript()" class="px-2 py-1 rounded bg-indigo-500/30 text-indigo-200 text-[11px] hover:bg-indigo-500/50 flex items-center gap-1">
+                            <i data-lucide="copy" class="w-3 h-3"></i> Copy Script
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-gray-300">Copy kode script bawaan ini dan tempel di **Extensions > Apps Script** di Google Spreadsheet Anda, lalu deploy sebagai Web App (Anyone).</p>
+                </div>
+            </div>
+
+            <!-- Backup / Restore Data JSON -->
+            <div class="border-t border-white/10 pt-4 space-y-3">
+                <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider">Backup & Restore Lokal</h4>
+                <div class="flex items-center gap-3">
+                    <button onclick="exportJSONBackup()" class="flex-1 py-2 rounded-xl glass-card hover:bg-white/10 text-xs font-medium text-gray-200 flex items-center justify-center gap-1.5">
+                        <i data-lucide="download" class="w-4 h-4 text-sky-400"></i> Export JSON
+                    </button>
+                    <label class="flex-1 py-2 rounded-xl glass-card hover:bg-white/10 text-xs font-medium text-gray-200 flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i data-lucide="upload" class="w-4 h-4 text-emerald-400"></i> Import JSON
+                        <input type="file" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="closeModal('modalSettings')" class="px-4 py-2 text-xs text-gray-400">Batal</button>
+                <button type="button" onclick="saveSettings()" class="px-5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition">Simpan Pengaturan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: VIEW ATTACHED RECEIPT PHOTO -->
+    <div id="modalViewImage" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="relative max-w-lg w-full glass-card rounded-3xl p-4 flex flex-col items-center">
+            <button onclick="closeModal('modalViewImage')" class="absolute top-3 right-3 text-gray-300 bg-black/50 p-2 rounded-full hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h4 class="text-sm font-semibold text-white mb-3">Foto Nota / Bukti Transaksi</h4>
+            <img id="fullSizeImage" src="" class="max-h-[70vh] w-auto rounded-2xl object-contain border border-white/10">
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. INITIAL STATE & CONSTANTS (12 DEFAULT MEMBERS)
+           ========================================================================== */
+        const DEFAULT_MEMBERS = [
+            "Andi", "Budi", "Citra", "Dewi", "Eko", "Farhan",
+            "Gita", "Hendra", "Indah", "Joko", "Kartika", "Lukman"
+        ];
+
+        let state = {
+            members: [],
+            transactions: [],
+            settings: {
+                scriptUrl: ""
+            }
+        };
+
+        let deferredPWAInstallPrompt = null;
+
+        /* ==========================================================================
+           2. APP INITIALIZATION & LOCALSTORAGE
+           ========================================================================== */
+        window.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            initPWA();
+            initIcons();
+            setDefaultDates();
+            renderAll();
+        });
+
+        function loadState() {
+            const savedMembers = localStorage.getItem('kasflow_members');
+            if (savedMembers) {
+                state.members = JSON.parse(savedMembers);
+            } else {
+                state.members = [...DEFAULT_MEMBERS];
+                saveMembersState();
+            }
+
+            const savedTx = localStorage.getItem('kasflow_transactions');
+            if (savedTx) {
+                state.transactions = JSON.parse(savedTx);
+            } else {
+                // Initial Sample Transactions
+                state.transactions = [
+                    {
+                        id: 'TX-' + Date.now() + '-1',
+                        date: new Date().toISOString().split('T')[0],
+                        type: 'IURAN',
+                        member: 'Andi',
+                        amount: 50000,
+                        description: 'Iuran Kas Rutin Bulan Ini',
+                        image: null
+                    },
+                    {
+                        id: 'TX-' + Date.now() + '-2',
+                        date: new Date().toISOString().split('T')[0],
+                        type: 'MASUK',
+                        member: 'Budi',
+                        amount: 250000,
+                        description: 'Sponsor Kegiatan Kantor',
+                        image: null
+                    }
+                ];
+                saveTxState();
+            }
+
+            const savedSettings = localStorage.getItem('kasflow_settings');
+            if (savedSettings) {
+                state.settings = JSON.parse(savedSettings);
+                document.getElementById('settingScriptUrl').value = state.settings.scriptUrl || '';
+            }
+        }
+
+        function saveMembersState() {
+            localStorage.setItem('kasflow_members', JSON.stringify(state.members));
+        }
+
+        function saveTxState() {
+            localStorage.setItem('kasflow_transactions', JSON.stringify(state.transactions));
+        }
+
+        function saveSettingsState() {
+            localStorage.setItem('kasflow_settings', JSON.stringify(state.settings));
+        }
+
+        function initIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function setDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('txDate').value = today;
+            
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            document.getElementById('filterMonth').value = currentMonth;
+
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            document.getElementById('iuranMonthLabel').innerText = monthNames[new Date().getMonth()] + ' ' + new Date().getFullYear();
+        }
+
+        /* ==========================================================================
+           3. CORE RENDERING ENGINE
+           ========================================================================== */
+        function renderAll() {
+            renderMemberDropdowns();
+            renderIuranTracker();
+            renderTransactions();
+            calculateAndRenderStats();
+            renderChart();
+            initIcons();
+        }
+
+        function renderMemberDropdowns() {
+            const txMemberSelect = document.getElementById('txMember');
+            const filterMemberSelect = document.getElementById('filterMember');
+
+            const currentTxMember = txMemberSelect.value;
+            const currentFilterMember = filterMemberSelect.value;
+
+            txMemberSelect.innerHTML = state.members.map(m => `<option value="${m}">${m}</option>`).join('');
+            
+            filterMemberSelect.innerHTML = '<option value="ALL">Semua Anggota Tim</option>' + 
+                state.members.map(m => `<option value="${m}">${m}</option>`).join('');
+
+            if (currentTxMember && state.members.includes(currentTxMember)) txMemberSelect.value = currentTxMember;
+            if (currentFilterMember) filterMemberSelect.value = currentFilterMember;
+
+            // Render Members Manager List
+            const membersListContainer = document.getElementById('membersManagerList');
+            membersListContainer.innerHTML = state.members.map((m, idx) => `
+                <div class="flex items-center justify-between p-2 rounded-xl glass-card text-xs">
+                    <span class="font-medium text-white">${idx + 1}. ${m}</span>
+                    <button onclick="handleDeleteMember('${m}')" class="text-rose-400 hover:text-rose-300 p-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        /* Calculate Monthly Iuran Paid for 12 Members */
+        function renderIuranTracker() {
+            const selectedMonth = document.getElementById('filterMonth').value || new Date().toISOString().slice(0, 7);
+            
+            // Find all IURAN transactions in selected month
+            const monthIuranTx = state.transactions.filter(t => t.type === 'IURAN' && t.date.startsWith(selectedMonth));
+            
+            const paidMembersMap = {};
+            monthIuranTx.forEach(t => {
+                paidMembersMap[t.member] = true;
+            });
+
+            const gridContainer = document.getElementById('gridMembersIuran');
+            let paidCount = 0;
+
+            gridContainer.innerHTML = state.members.map(member => {
+                const isPaid = paidMembersMap[member];
+                if (isPaid) paidCount++;
+
+                return `
+                    <div onclick="quickPayIuran('${member}')" class="p-2.5 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-2 ${
+                        isPaid 
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 shadow-neon-emerald' 
+                            : 'bg-white/5 border-white/10 text-gray-400 hover:border-indigo-500/40'
+                    }">
+                        <div class="truncate">
+                            <div class="text-xs font-semibold truncate text-white">${member}</div>
+                            <div class="text-[10px] ${isPaid ? 'text-emerald-400 font-medium' : 'text-rose-400'}">
+                                ${isPaid ? 'Lunas' : 'Belum Bayar'}
+                            </div>
+                        </div>
+                        <div class="p-1 rounded-lg ${isPaid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500'}">
+                            <i data-lucide="${isPaid ? 'check-circle' : 'clock'}" class="w-3.5 h-3.5"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update Progress Bar
+            const totalMembers = state.members.length;
+            const percentage = totalMembers > 0 ? Math.round((paidCount / totalMembers) * 100) : 0;
+            
+            document.getElementById('iuranProgressCount').innerText = `${paidCount}/${totalMembers} Lunas (${percentage}%)`;
+            document.getElementById('iuranProgressBar').style.width = `${percentage}%`;
+        }
+
+        /* Calculate Financial Totals */
+        function calculateAndRenderStats() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let totalBonActive = 0;
+            let activeBonCount = 0;
+
+            state.transactions.forEach(t => {
+                const amt = Number(t.amount) || 0;
+                if (t.type === 'MASUK' || t.type === 'IURAN') {
+                    totalIncome += amt;
+                } else if (t.type === 'KELUAR') {
+                    totalExpense += amt;
+                } else if (t.type === 'KAS_BON') {
+                    if (!t.settled) {
+                        totalBonActive += (amt - (Number(t.settledAmount) || 0));
+                        activeBonCount++;
+                    }
+                }
+            });
+
+            const netBalance = (totalIncome - totalExpense - totalBonActive);
+
+            document.getElementById('statTotalBalance').innerText = formatRupiah(netBalance);
+            document.getElementById('statTotalIncome').innerText = formatRupiah(totalIncome);
+            document.getElementById('statTotalExpense').innerText = formatRupiah(totalExpense);
+            document.getElementById('statTotalBon').innerText = formatRupiah(totalBonActive);
+            document.getElementById('statBonCountBadge').innerText = `${activeBonCount} Aktif`;
+            document.getElementById('chartCenterBalance').innerText = formatRupiah(netBalance);
+        }
+
+        /* Render Transactions Table */
+        function renderTransactions() {
+            const filterSearch = document.getElementById('filterSearch').value.toLowerCase();
+            const filterType = document.getElementById('filterType').value;
+            const filterMember = document.getElementById('filterMember').value;
+            const filterMonth = document.getElementById('filterMonth').value;
+
+            let filtered = state.transactions.filter(t => {
+                const matchSearch = t.description.toLowerCase().includes(filterSearch) || (t.member && t.member.toLowerCase().includes(filterSearch));
+                const matchType = (filterType === 'ALL') || (t.type === filterType);
+                const matchMember = (filterMember === 'ALL') || (t.member === filterMember);
+                const matchMonth = !filterMonth || t.date.startsWith(filterMonth);
+
+                return matchSearch && matchType && matchMember && matchMonth;
+            });
+
+            // Sort Descending by Date & ID
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const tbody = document.getElementById('transactionTableBody');
+            const emptyState = document.getElementById('emptyTransactionsState');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            tbody.innerHTML = filtered.map(t => {
+                let typeBadge = '';
+                let amountClass = '';
+                let amountPrefix = '';
+
+                if (t.type === 'IURAN') {
+                    typeBadge = `<span class="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">Iuran</span>`;
+                    amountClass = 'text-emerald-400 font-bold';
+                    amountPrefix = '+';
+                } else if (t.type === 'MASUK') {
+                    typeBadge = `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">Kas Masuk</span>`;
+                    amountClass = 'text-emerald-400 font-bold';
+                    amountPrefix = '+';
+                } else if (t.type === 'KELUAR') {
+                    typeBadge = `<span class="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 font-medium">Kas Keluar</span>`;
+                    amountClass = 'text-rose-400 font-bold';
+                    amountPrefix = '-';
+                } else if (t.type === 'KAS_BON') {
+                    const isSettled = t.settled;
+                    typeBadge = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">Kas Bon</span>`;
+                    amountClass = isSettled ? 'text-gray-400 line-through' : 'text-amber-400 font-bold';
+                    amountPrefix = '•';
+                }
+
+                const hasImage = !!t.image;
+
+                return `
+                    <tr class="hover:bg-white/5 transition">
+                        <td class="p-3 font-mono text-gray-300 whitespace-nowrap">${formatDateShort(t.date)}</td>
+                        <td class="p-3">${typeBadge}</td>
+                        <td class="p-3 font-semibold text-white">${t.member || '-'}</td>
+                        <td class="p-3 text-gray-300 max-w-xs truncate" title="${t.description}">${t.description}</td>
+                        <td class="p-3 text-right ${amountClass} whitespace-nowrap">${amountPrefix} ${formatRupiah(t.amount)}</td>
+                        <td class="p-3 text-center whitespace-nowrap">
+                            ${t.type === 'KAS_BON' ? `
+                                <button onclick="openBonSettlementModal('${t.id}')" class="px-2 py-1 rounded-lg ${t.settled ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'} text-[10px] font-semibold">
+                                    ${t.settled ? 'Lunas' : 'Cicil / Bayar'}
+                                </button>
+                            ` : (hasImage ? `
+                                <button onclick="viewImage('${t.id}')" class="p-1 rounded-lg bg-sky-500/20 text-sky-300 hover:bg-sky-500/30" title="Lihat Nota">
+                                    <i data-lucide="image" class="w-3.5 h-3.5 inline"></i>
+                                </button>
+                            ` : '<span class="text-gray-600">-</span>')}
+                        </td>
+                        <td class="p-3 text-center whitespace-nowrap">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="openEditTransaction('${t.id}')" class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10" title="Edit">
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="deleteTransaction('${t.id}')" class="p-1 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10" title="Hapus">
+                                    <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            initIcons();
+        }
+
+        /* Canvas Custom Donut Chart Render */
+        function renderChart() {
+            const canvas = document.getElementById('chartCashFlow');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            // Set scale resolution
+            canvas.width = 200;
+            canvas.height = 200;
+
+            let totalIuran = 0, totalMasuk = 0, totalKeluar = 0, totalBon = 0;
+            state.transactions.forEach(t => {
+                const amt = Number(t.amount) || 0;
+                if (t.type === 'IURAN') totalIuran += amt;
+                else if (t.type === 'MASUK') totalMasuk += amt;
+                else if (t.type === 'KELUAR') totalKeluar += amt;
+                else if (t.type === 'KAS_BON' && !t.settled) totalBon += (amt - (Number(t.settledAmount) || 0));
+            });
+
+            const data = [totalIuran, totalMasuk, totalKeluar, totalBon];
+            const colors = ['#6366f1', '#34d399', '#fb7185', '#fbbf24'];
+            const totalSum = data.reduce((a, b) => a + b, 0);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 75;
+            const innerRadius = 55;
+
+            if (totalSum === 0) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 18;
+                ctx.stroke();
+                return;
+            }
+
+            let startAngle = -Math.PI / 2;
+
+            data.forEach((val, idx) => {
+                if (val <= 0) return;
+                const sliceAngle = (val / totalSum) * 2 * Math.PI;
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+                ctx.strokeStyle = colors[idx];
+                ctx.lineWidth = 18;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                startAngle += sliceAngle;
+            });
+        }
+
+        /* ==========================================================================
+           4. TRANSACTION HANDLERS (SAVE, EDIT, DELETE, SETTLEMENT)
+           ========================================================================== */
+        function toggleFormFieldsBasedOnType() {
+            const type = document.getElementById('txType').value;
+            const memberContainer = document.getElementById('containerMemberSelect');
+            if (type === 'MASUK') {
+                memberContainer.style.opacity = '0.5';
+            } else {
+                memberContainer.style.opacity = '1';
+            }
+        }
+
+        function handleSaveTransaction(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('txId').value;
+            const type = document.getElementById('txType').value;
+            const amount = Number(document.getElementById('txAmount').value);
+            const date = document.getElementById('txDate').value;
+            const member = document.getElementById('txMember').value;
+            const description = document.getElementById('txDescription').value;
+            const image = document.getElementById('txImageData').value || null;
+
+            if (id) {
+                // Update Existing
+                const idx = state.transactions.findIndex(t => t.id === id);
+                if (idx !== -1) {
+                    state.transactions[idx] = {
+                        ...state.transactions[idx],
+                        type, amount, date, member, description, image
+                    };
+                }
+            } else {
+                // Create New
+                const newTx = {
+                    id: 'TX-' + Date.now(),
+                    date,
+                    type,
+                    member,
+                    amount,
+                    description,
+                    image,
+                    settled: false,
+                    settledAmount: 0
+                };
+                state.transactions.unshift(newTx);
+            }
+
+            saveTxState();
+            closeModal('modalAddTransaction');
+            renderAll();
+            
+            // Auto Sync to Spreadsheet if Configured
+            if (state.settings.scriptUrl) {
+                triggerSheetSync();
+            }
+        }
+
+        function openEditTransaction(id) {
+            const tx = state.transactions.find(t => t.id === id);
+            if (!tx) return;
+
+            document.getElementById('txId').value = tx.id;
+            document.getElementById('txType').value = tx.type;
+            document.getElementById('txAmount').value = tx.amount;
+            document.getElementById('txDate').value = tx.date;
+            document.getElementById('txMember').value = tx.member;
+            document.getElementById('txDescription').value = tx.description;
+            document.getElementById('txImageData').value = tx.image || '';
+
+            if (tx.image) {
+                document.getElementById('imagePreview').src = tx.image;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            } else {
+                removeImagePreview();
+            }
+
+            document.getElementById('modalAddTitle').innerText = 'Edit Transaksi Kas';
+            openModal('modalAddTransaction');
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
+                state.transactions = state.transactions.filter(t => t.id !== id);
+                saveTxState();
+                renderAll();
+            }
+        }
+
+        function quickPayIuran(memberName) {
+            const selectedMonth = document.getElementById('filterMonth').value || new Date().toISOString().slice(0, 7);
+            const today = new Date().toISOString().split('T')[0];
+
+            // Check if already paid
+            const existing = state.transactions.find(t => t.type === 'IURAN' && t.member === memberName && t.date.startsWith(selectedMonth));
+            
+            if (existing) {
+                alert(`Iuran ${memberName} untuk bulan ini sudah terbayar.`);
+                return;
+            }
+
+            // Quick add 50k default or custom prompt
+            const amountInput = prompt(`Input nominal Iuran Kas untuk ${memberName}:`, "50000");
+            if (!amountInput) return;
+
+            const newTx = {
+                id: 'TX-' + Date.now(),
+                date: today,
+                type: 'IURAN',
+                member: memberName,
+                amount: Number(amountInput) || 50000,
+                description: `Iuran Rutin Kas Bulan ${selectedMonth}`,
+                image: null
+            };
+
+            state.transactions.unshift(newTx);
+            saveTxState();
+            renderAll();
+
+            if (state.settings.scriptUrl) triggerSheetSync();
+        }
+
+        /* Kas Bon Settlement Modal Functions */
+        function openBonSettlementModal(id) {
+            const tx = state.transactions.find(t => t.id === id);
+            if (!tx) return;
+
+            const remaining = tx.amount - (Number(tx.settledAmount) || 0);
+
+            document.getElementById('bonTxId').value = tx.id;
+            document.getElementById('bonMemberName').innerText = `Anggota: ${tx.member}`;
+            document.getElementById('bonRemainingAmount').innerText = formatRupiah(remaining);
+            document.getElementById('bonDetailDesc').innerText = tx.description;
+            document.getElementById('settlementAmount').value = remaining;
+            
+            openModal('modalBonSettlement');
+        }
+
+        function handleSaveSettlement(e) {
+            e.preventDefault();
+            const id = document.getElementById('bonTxId').value;
+            const payAmount = Number(document.getElementById('settlementAmount').value);
+            const note = document.getElementById('settlementNote').value;
+
+            const txIdx = state.transactions.findIndex(t => t.id === id);
+            if (txIdx !== -1) {
+                const tx = state.transactions[txIdx];
+                const currentSettled = Number(tx.settledAmount) || 0;
+                const newSettled = currentSettled + payAmount;
+
+                tx.settledAmount = newSettled;
+                if (newSettled >= tx.amount) {
+                    tx.settled = true;
+                }
+
+                // Add Kas Masuk Settlement Record
+                state.transactions.unshift({
+                    id: 'TX-' + Date.now(),
+                    date: new Date().toISOString().split('T')[0],
+                    type: 'MASUK',
+                    member: tx.member,
+                    amount: payAmount,
+                    description: `Pelunasan Bon: ${note} (${tx.description})`,
+                    image: null
+                });
+
+                saveTxState();
+                closeModal('modalBonSettlement');
+                renderAll();
+            }
+        }
+
+        /* ==========================================================================
+           5. GOOGLE APPS SCRIPT SPREADSHEET INTEGRATION
+           ========================================================================== */
+        async function triggerSheetSync() {
+            const url = state.settings.scriptUrl;
+            if (!url) {
+                alert('Silakan masukkan URL Google Apps Script pada menu Pengaturan terlebih dahulu.');
+                openModal('modalSettings');
+                return;
+            }
+
+            const iconSync = document.getElementById('iconSyncHeader');
+            if (iconSync) iconSync.classList.add('animate-spin');
+
+            document.getElementById('syncStatusText').innerText = 'Syncing...';
+
+            try {
+                const payload = {
+                    transactions: state.transactions,
+                    members: state.members,
+                    timestamp: new Date().toISOString()
+                };
+
+                // CORS Mode No-Cors for GAS Web App Simple POST
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                document.getElementById('syncStatusText').innerText = 'Synced to Sheet';
+                document.getElementById('syncStatusBadge').className = 'inline-block w-2 h-2 rounded-full bg-emerald-400';
+            } catch (err) {
+                console.error('Sync Error:', err);
+                document.getElementById('syncStatusText').innerText = 'Sync Offline';
+                document.getElementById('syncStatusBadge').className = 'inline-block w-2 h-2 rounded-full bg-rose-400';
+            } finally {
+                if (iconSync) iconSync.classList.remove('animate-spin');
+            }
+        }
+
+        function saveSettings() {
+            const url = document.getElementById('settingScriptUrl').value.trim();
+            state.settings.scriptUrl = url;
+            saveSettingsState();
+            closeModal('modalSettings');
+            alert('Pengaturan Google Apps Script berhasil disimpan!');
+        }
+
+        function copyGASScript() {
+            const scriptCode = `// PASTE KODE INI DI GOOGLE APPS SCRIPT (Extensions > Apps Script)
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    var transactions = data.transactions;
+    
+    // Header
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["ID Transaksi", "Tanggal", "Jenis", "Anggota", "Nominal", "Keterangan", "Status Bon"]);
+    }
+    
+    // Clear and Rewrite Data
+    sheet.getRange(2, 1, sheet.getLastRow() + 1, 7).clearContent();
+    
+    transactions.forEach(function(t) {
+      sheet.appendRow([
+        t.id,
+        t.date,
+        t.type,
+        t.member || '-',
+        t.amount,
+        t.description,
+        t.settled ? "Lunas" : "Aktif"
+      ]);
+    });
+    
+    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+            
+            // Clipboard Fallback Execution
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = scriptCode;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempTextArea);
+            
+            alert('Script Google Apps Script (GAS) berhasil dicopy ke clipboard!');
+        }
+
+        /* ==========================================================================
+           6. MEMBER MANAGEMENT (ADD & DELETE)
+           ========================================================================== */
+        function handleAddMember(e) {
+            e.preventDefault();
+            const input = document.getElementById('newMemberName');
+            const name = input.value.trim();
+
+            if (name && !state.members.includes(name)) {
+                state.members.push(name);
+                saveMembersState();
+                input.value = '';
+                renderAll();
+            }
+        }
+
+        function handleDeleteMember(name) {
+            if (confirm(`Hapus ${name} dari daftar anggota tim?`)) {
+                state.members = state.members.filter(m => m !== name);
+                saveMembersState();
+                renderAll();
+            }
+        }
+
+        /* ==========================================================================
+           7. EXPORT TO CSV & BACKUP/RESTORE
+           ========================================================================== */
+        function exportToCSV() {
+            if (state.transactions.length === 0) {
+                alert('Tidak ada data transaksi untuk diekspor.');
+                return;
+            }
+
+            let csv = 'ID,Tanggal,Jenis,Anggota,Nominal,Keterangan,Status_Bon\n';
+            state.transactions.forEach(t => {
+                const desc = `"${t.description.replace(/"/g, '""')}"`;
+                csv += `${t.id},${t.date},${t.type},"${t.member || '-'}",${t.amount},${desc},${t.settled ? 'Lunas' : 'Belum Lunas'}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', `KasFlow_Export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportJSONBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `KasFlow_Backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSONBackup(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    if (imported.members && imported.transactions) {
+                        state = imported;
+                        saveMembersState();
+                        saveTxState();
+                        if (imported.settings) saveSettingsState();
+                        renderAll();
+                        alert('Data Kas berhasil dipulihkan dari file JSON!');
+                    } else {
+                        alert('Format file JSON backup tidak valid.');
+                    }
+                } catch(err) {
+                    alert('Gagal membaca file JSON: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /* ==========================================================================
+           8. IMAGE HANDLING & PREVIEW
+           ========================================================================== */
+        function handleImagePreview(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('txImageData').value = evt.target.result;
+                document.getElementById('imagePreview').src = evt.target.result;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImagePreview() {
+            document.getElementById('txImageData').value = '';
+            document.getElementById('txImageInput').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        }
+
+        function viewImage(id) {
+            const tx = state.transactions.find(t => t.id === id);
+            if (tx && tx.image) {
+                document.getElementById('fullSizeImage').src = tx.image;
+                openModal('modalViewImage');
+            }
+        }
+
+        /* ==========================================================================
+           9. PWA SERVICE WORKER & MANIFEST GENERATION
+           ========================================================================== */
+        function initPWA() {
+            // Generate Dynamic Manifest Data URI
+            const manifestObj = {
+                name: "KasFlow Pro - Uang Kas Tim",
+                short_name: "KasFlow",
+                start_url: "./",
+                display: "standalone",
+                background_color: "#06090e",
+                theme_color: "#0f172a",
+                icons: [
+                    {
+                        src: "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
+                        sizes: "512x512",
+                        type: "image/png"
+                    }
+                ]
+            };
+
+            const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/json' });
+            document.getElementById('manifest-link').href = URL.createObjectURL(manifestBlob);
+
+            // Register Service Worker Inline
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'kasflow-pwa-v1';
+                    self.addEventListener('install', (e) => {
+                        e.waitUntil(self.skipWaiting());
+                    });
+                    self.addEventListener('activate', (e) => {
+                        e.waitUntil(self.clients.claim());
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(
+                            fetch(e.request).catch(() => caches.match(e.request))
+                        );
+                    });
+                `;
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+            }
+
+            // Capture PWA Install Prompt
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPWAInstallPrompt = e;
+                document.getElementById('pwaInstallBanner').classList.remove('hidden');
+            });
+        }
+
+        function installPWAApp() {
+            if (deferredPWAInstallPrompt) {
+                deferredPWAInstallPrompt.prompt();
+                deferredPWAInstallPrompt.userChoice.then(() => {
+                    deferredPWAInstallPrompt = null;
+                    document.getElementById('pwaInstallBanner').classList.add('hidden');
+                });
+            }
+        }
+
+        function dismissPWAInstall() {
+            document.getElementById('pwaInstallBanner').classList.add('hidden');
+        }
+
+        /* ==========================================================================
+           10. UTILITIES & MODALS
+           ========================================================================== */
+        function formatRupiah(num) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num || 0);
+        }
+
+        function formatDateShort(dateStr) {
+            if (!dateStr) return '-';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0].slice(2)}`;
+            }
+            return dateStr;
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            if (modalId === 'modalAddTransaction' && !document.getElementById('txId').value) {
+                document.getElementById('formTransaction').reset();
+                document.getElementById('txId').value = '';
+                document.getElementById('modalAddTitle').innerText = 'Catat Transaksi Uang Kas';
+                setDefaultDates();
+                removeImagePreview();
+                toggleFormFieldsBasedOnType();
+            }
+            initIcons();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
