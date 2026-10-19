@@ -1,40 +1,26 @@
-const CACHE_NAME = 'kasflow-pwa-v1';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'wskas-v2';
+const ASSETS = [
     './',
     './index.html',
     './style.css',
     './script.js',
     './manifest.json',
-    'https://cdn.tailwindcss.com',
-    'https://unpkg.com/lucide@latest'
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'
 ];
 
-self.addEventListener('install', (event) => {
-    event.waitUntil(
+self.addEventListener('install', (e) => {
+    e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS_TO_CACHE);
-        }).then(() => self.skipWaiting())
+            return cache.addAll(ASSETS);
+        })
     );
 });
 
-self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
-                        return caches.delete(cache);
-                    }
-                })
-            );
-        }).then(() => self.clients.claim())
-    );
-});
-
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        fetch(event.request).catch(() => {
-            return caches.match(event.request);
+self.addEventListener('fetch', (e) => {
+    e.respondWith(
+        caches.match(e.request).then((res) => {
+            return res || fetch(e.request);
         })
     );
 });
